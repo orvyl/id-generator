@@ -19,9 +19,10 @@ public class LongIDGeneratorTest {
         Thread.sleep(200);
         IDGenerator<Long> idGenerator = new LongIDGenerator(zd);
 
+        int size = 2000;
         ExecutorService service = Executors.newFixedThreadPool(100);
         List<Long> ids = Collections.synchronizedList(new ArrayList<>());
-        for (int x = 0; x < 100; x++) {
+        for (int x = 0; x < size; x++) {
             service.execute(() -> {
                 try {
                     ids.add(idGenerator.getNextID());
@@ -34,8 +35,8 @@ public class LongIDGeneratorTest {
         Thread.sleep(1000);
 
         service.shutdownNow();
-        Assert.assertEquals(100, ids.size());
-        Assert.assertEquals(100, ids.stream().distinct().peek(System.out::println).count());
+        Assert.assertEquals(size, ids.size());
+        Assert.assertEquals(size, ids.stream().distinct().count());
     }
 
 }

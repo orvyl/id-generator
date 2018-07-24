@@ -4,6 +4,7 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
+import java.util.concurrent.TimeUnit;
 
 public final class LongIDGenerator implements IDGenerator<Long> {
 
@@ -17,7 +18,7 @@ public final class LongIDGenerator implements IDGenerator<Long> {
         try {
             startTime = createStartTime(dateTimeSeed);
             machineId = getLower16BitPrivateIP();
-            sequence = 0x00FF & (1 << 7);
+            sequence = 128;
         } catch (UnknownHostException e) {
             throw new IDGenerationException(e);
         }
@@ -25,27 +26,24 @@ public final class LongIDGenerator implements IDGenerator<Long> {
 
     @Override
     public synchronized Long getNextID() throws IDGenerationException {
-        final short mask = 0x00FF & (1 << 7);
 
         long currentTime = createStartTime(ZonedDateTime.now()) - startTime;
         if (elapsedTime < currentTime) {
             elapsedTime = currentTime;
             sequence = 0;
-            System.out.println();
         } else {
-            sequence = (short) ((sequence + 1) & mask);
+            sequence = ++sequence == 256 ? 0 : sequence;
             if (sequence == 0) {
                 elapsedTime++;
-                /*try {
+                try {
                     long overtime = elapsedTime - currentTime;
-                    long timeNow = ZonedDateTime.now().getNano() % (long) 1e7;
+                    long timeNow = (ZonedDateTime.now().toEpochSecond() * 1_000_000_000) % (long) 1e7;
+                    long timeout = (overtime * 1_000_000 * 10) - timeNow;
 
-                    long timeout = (overtime * 10 * 1_000_000) - timeNow;
-                    System.out.println("Sleeping now for " + timeNow + " nanos...");
                     TimeUnit.NANOSECONDS.sleep(timeout);
                 } catch (InterruptedException e) {
                     throw new IDGenerationException(e);
-                }*/
+                }
             }
         }
 
@@ -57,7 +55,7 @@ public final class LongIDGenerator implements IDGenerator<Long> {
             throw new IDGenerationException("DateTime seed must not be future date/time");
         }
 
-        return zonedDateTime.getNano() / (long) 1e7;
+        return (zonedDateTime.toEpochSecond() * 1_000_000_000) / (long) 1e7;
     }
 
     private static short getLower16BitPrivateIP() throws UnknownHostException {
